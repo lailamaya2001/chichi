@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok LIVE Chat Reader (Demo)</title>
+
+    <meta name="description" content="A chat reader for TikTok LIVE utilizing TikTok-Live-Connector and Socket.IO to forward the data to the client. This demo project uses the unofficial TikTok API to retrieve chat comments, gifts and other events from TikTok LIVE.">
+    <meta name="keywords" content="TikTok,Live,Livestream,Chat,Reader,Scraper,Tracker,tiktok.com,broadcast,api,library,node,node.js,javascript">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.7.14/css/bootstrap-datetimepicker.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.15.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.37/js/bootstrap-datetimepicker.min.js"></script>
+    <script src="connection.js"></script>
+    <script src="app.js"></script>
+
+    <script type="text/javascript">
+        // window.localStorage.clear()
+        $(document).ready(function() {
+        $('#time_countdown').datetimepicker({
+                format: 'HH:mm:ss'
+        });
+        $(".test").click(function(){    
+            $("#myModal_test").modal('show');
+            $("#exampleModal").modal('hide');
+        });
+        $(".test1").click(function(){ 
+            $("#myModal_test").modal('hide');
+            $("#controller").modal('show');
+        });
+    })
+    </script>
+      <script>
+        function generateOverlay() {
+            let username = $('#uniqueIdInput').val();
+            let url = `/obs.html?username=${username}&showLikes=1&showChats=1&showGifts=1&showFollows=1&showJoins=1&bgColor=rgb(24,23,28)&fontColor=rgb(227,229,235)&fontSize=1.3em`;
+        
+            if(username) {
+                window.open(url, '_blank');
+            } else {
+                alert("Enter username");
+            }
+        }
+    </script>
+</head>
+<body>
+    <input type='hidden' id="countdown_active" class="form-control"/>
+<input type='hidden' id="room_id" class="form-control"/>
+	<div class="container-fluid">
+        <div class="tiktok-content">
+            <h1>TikTok LIVE Chat Reader</h1>
+            <div class="row">
+                  
+                <div class="col-md-12">
+                    Đọc bình luận (chat, comment) của livestream trên TikTok - Lọc riêng khách để Follow và thống kê số likes từng user chơi Minigame
+                    <div class="fc-btn-action ">
+                        <button type="button" data-toggle="modal" data-target="#myModal" class="btn btn-info button_like_heart">
+                            <span class="glyphicon glyphicon-heart"></span> Game Thả Tim
+                            
+                        </button>
+                    </div>
+                    <div style="margin-right: 20px;" class="fc-btn-action ">
+                        <button type="button" class="btn btn-info" data-toggle="modal" data-target="#exampleModal">
+                            <span style="color: red;" class="glyphicon glyphicon-sound-dolby"></span>  Game Đoán Từ
+                        </button>
+                    </div>
+                </div>
+               
+                <div  class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                    <div   class="modal-dialog">
+                      <div style="height: 550px;" class="modal-content">
+                        <div class="modal-header">
+                          <h5 class="modal-title" id="exampleModalLabel"> Game Đoán Từ</h5>
+                          <button style="margin-top: -20px;" type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <div class="but"> 
+                                <span aria-hidden="true">&times;</span>
+                            </div>
+                          </button>
+                        </div>
+                        <div style="text-align: center;" class="modal-body modal-body_style">
+                            <button  style="width: 250px;height: 40px;background: #00ff00;color: black;font-weight: bold;" class="btn   test"> > START GAME</button>
+                            <p style="margin-top: 40px"><a href="#">Bảng xếp hạng</a></p>
+                        </div>
+                         
+                      </div>
+                    </div>
+                  </div>
+
+                  <div  class="modal fade" id="result" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                    <div   class="modal-dialog">
+                      <div   class="modal-content">
+                        <div class="modal-header">
+                          <h5 class="modal-title" id="exampleModalLabel"> Bảng xếp hạng</h5>
+                          <button style="margin-top: -20px;" type="button" class="close " data-dismiss="modal" aria-label="Close">
+                            <div class="but">
+
+                                <span onclick="reload_pages()" aria-hidden="true">&times;</span>
+                            </div>
+                          </button>
+                        </div>
+                        <div style="text-align: center;" class="modal-body  ">
+                            <div style="text-align: right;padding-bottom: 40px;margin-right: 20px;" class="button_clear">
+                                <a style="color: red;" onclick="removeData()"  href="#">Clear</a>
+                            </div>
+                            <table style="width: 50%;margin: 0 auto;" class="table table-bordered table-sm">
+                                <thead>
+                                <tr>
+                                    <th style="text-align: center;width: 50%;">ID</th>
+                                    <th style="text-align: center;width: 50%;">Số câu đúng</th>
+                                    
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr class="total_number">
+                                </tr> 
+                                </tbody>
+                            </table>
+                        </div>
+                         
+                      </div>
+                    </div>
+                  </div>
+
+                  <div  class="modal fade" data-refresh="true" role="dialog" aria-hidden="true" id="controller" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                    <div   class="modal-dialog">
+                      <div style="height: 600px;" class="modal-content">
+                        <div class="modal-header" style="position: relative;">
+                            <p style="max-width: 570px;margin: 0 auto;text-align: center; ">Thời gian trả lời tối đa 1 phút. Dừng lại  <b>5s</b> khi có người trả lời đúng > Chuyển câu tiếp
+                                Show ra <b> 1 ký tự đầu</b> + Nếu không có <b> gợi</b> ý & <b> hình ảnh</b>  Show ra <b> ký tự thứ 2 ở vị trí ngẫu nhiên</b>
+                                Nhạc nền trong lúc chơi. Nhạc hiệu ứng 3-5 giây khi người trả lời đúng
+                                </p>
+                        </div>
+                        <div style="text-align: center;width: 70%;" class="modal-body ">
+                            <div style="background: #00C2D8; position: absolute;left: 20%;width: 100%;" class="overview">
+                                <div class="img">
+                                    <img style="margin-top: 30px;height: 100px;width: 100px;" id="img" src="" alt="">
+                                </div>
+                              
+                                <div class="but"  >
+                                    <button style="margin-right:8px;" type="button" class="close" data-dismiss="modal">&times;</button>
+                                </div>
+                                <div class="keyword">
+                                    <span id="key" > </span>
+                                    <input type="text" class="typing-input wrong" maxlength="1">
+                                </div>
+                                <h3 style="color: white;">GÕ ĐÁP ÁN TRONG MỤC CHAT</h3>
+                               
+                                <div style="display: flex;justify-content: center;" id="suggest" class="suggest">
+                                    
+                                    
+                                </div>
+                                
+                                <div style="padding-top: 20px;padding-bottom: 30px;"  id="user_win" class="user_img user_win_hidden" >
+                                     <img style="height: 80px; width: 80px;"   src="" alt="">
+                                     <br>  
+                                     <span style="padding-top: 10px;" class="account">
+                                            Winner
+                                        </span>
+                                </div>
+                               
+                                <input  type="hidden" id="myInput" value="0">
+                                <div style=" position: absolute;bottom: 10px;right: 10px;display: flex;"> 
+                                   
+                                    <div> 
+                                        <span id="time"> </span> 
+                                        <input type="hidden" id="demo_time">
+      
+                                        <input type="hidden" id="get_answer" value="0">
+                                        <input type="hidden" id="select-item-question" value="">
+                                    </div>
+                                     
+                                </div>
+                            </div>
+                        </div>
+                         
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div id="myModal_test" class="modal fade" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div style="height: 550px;" class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"> Game Đoán Từ</h5>
+                                <div class="but"> 
+                                    <button style="margin-right: 8px;" type="button" class="close" data-dismiss="modal">&times;</button>
+                                </div>
+                            </div>
+                            <div style="text-align: center;" class="modal-body">
+                                <h3 style="font-size: 17px;font-weight: bold;">DANH SÁCH TỪ KHÓA</h3>
+                                <p>Mỗi từ 1 dòng,có thể kèm từ khóa, gợi ý,Link ảnh,đáp án</p>
+                                <!-- <img src="tiktok/pngtree-cute-tiger-cartoon-png-image_1788214.jpg" alt=""> -->
+                                <!-- <img src="tiktok/pngtree-hand-painted-cartoon-puppy-cartoon-design-puppy-image-png-image_3796847.jpg" alt=""> -->
+                                <!-- <img src="tiktok/pngtree-cartoon-piglet-cartoon-animals-cute-animal-pink-pig-png-image_3944248.jpg" alt=""> -->
+                                <!-- <img src="tiktok/download.jpg" alt=""> -->
+                                <!-- <img src="tiktok/pngtree-cute-chick-cartoon-chick-illustration-hand-painted-chick-red-tail-png-image_453287.jpg" alt=""> -->
+                                <textarea placeholder="Từ khóa&#10;Gợi ý&#10;Hình ảnh&#10;Đáp án&#10;Thời gian" id="textarea"></textarea>
+                          
+                                    <br>
+                                    <button id="btn"  style="margin-top: 20px;width: 250px;height: 40px;background: #00ff00;color: black;font-weight: bold;" class="btn test1"> > START GAME</button>
+                                
+                            </div>
+                             
+                        </div>
+                    </div>
+                </div>
+                
+
+            </div>
+            <div class="row">
+                <div class="col-md-5">
+                    <div class="box-header">
+                        <div class="inputFields">
+                            <p>Nhập <b>@username</b> của user đang phát live</p>
+                            <input type="text" class="form-control" id="uniqueIdInput" value="">
+                            <button type="button" class="btn btn-primary mta4" id="connectButton">Connect</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-7">
+                    <div class="box-button hide2">
+                        <div class="box-number">
+                            <div class="number-item">
+                                Viewers: <div id="view_total">0</div>
+                            </div>
+                            <div class="number-item">
+                                Likes: <div id="like_total">0</div>
+                            </div>
+                            <div class="number-item">
+                                Diamonds: <div id="diamond_total">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="error_show"></div>
+            <div id="display_show"></div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="chatcontainer">
+                        <h3 class="containerheader">Chats</h3>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="giftcontainer">
+                        <h3 class="containerheader">Gifts</h3>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="phone_container">
+                        <h3 class="containerheader">Follows</h3>
+                        <div class="phone_container_show"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+	</div>
+
+<!-- Modal -->
+<div id="myModal" class="modal fade" role="dialog">
+    <div class="modal-dialog">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="but"> 
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <h4 class="modal-title">Game thả tim</h4>
+            </div>
+            <div class="modal-body">
+                <div class="box-likes-chart">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="countdown_box">
+                                <div class="cd-head">
+                                    <div class="cd-time">
+                                        <div class='input-group date' id='time_countdown' style="width: 120px">
+                                            <input type='text' id="countdown_value" class="form-control" value="00:02:00"/>
+                                            <span class="input-group-addon">
+                                       <span class="glyphicon glyphicon-time"></span>
+                                   </span>
+                                        </div>
+                                    </div>
+                                    <select id="select_top" class="form-control">
+                                        <option value="5">Top 5</option>
+                                        <option value="10">Top 10</option>
+                                    </select>
+                                    <button type="button" class="btn btn-success" id="stopButton" rel="0"><span class="glyphicon glyphicon-play"></span> Start</button>&nbsp;
+                                    <button type="button" class="btn btn-warning" id="resetButton"><span class="glyphicon glyphicon-trash"></span> Clear</button>
+                                </div>
+                                <div id="timer-widget-2555" class="widget-container widget-timer">
+                                    <div class="timer">
+                                        <div class="time-body">
+                                            <div class="hours timer-box">
+                                                <span class="timer-values">00</span>
+                                            </div> :
+                                            <div class="minutes timer-box">
+                                                <span class="timer-values">00</span>
+                                            </div> :
+                                            <div class="seconds timer-box">
+                                                <span class="timer-values">00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="clearfix"></div>
+                            <div class="top-rank-content">
+                                <div class="cd-head-chart">
+                                    XẾP HẠNG THẢ TIM
+                                </div>
+                                <div class="box-duel"><p class="text-center">Chưa có danh sách nào!</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<script>
+      
+     
+    //sự kiện onlick chạy câu hỏi
+    typingInput = document.querySelector(".typing-input");
+    var obj = document.getElementById('btn');
+    obj.addEventListener('click', function(){
+        $(function(){
+        let tastlist = [];
+        let check;
+        let check1;
+         var c =document.getElementById('textarea').value;
+            if (c == '') {
+                if (localStorage.hasOwnProperty("fchat_titok_game")) {
+                    check = JSON.parse(localStorage.getItem('fchat_titok_game'));
+                }else{
+                    return false;
+                }
+            }else{
+
+                $.each($('#textarea').val().split(/\n/), function(i, line){
+                        if(line){
+                            tastlist.push(line);
+                        } else {
+                            tastlist.push("");
+                        }
+                    });
+            
+                if(JSON.parse(localStorage.getItem('fchat_titok_game') === null && JSON.parse(localStorage.getItem('fchat_titok_game'))) === null){
+                        
+                    localStorage.setItem('fchat_titok_game' ,JSON.stringify([]))
+                }
+                const data = JSON.parse(localStorage.getItem('fchat_titok_game'))
+                data.push({question: tastlist[0], suggest: tastlist[1].toUpperCase(), image: tastlist[2],answer: tastlist[3].toUpperCase(),duration:tastlist[4]})
+                localStorage.setItem('fchat_titok_game' ,JSON.stringify(data))
+            }
+            if (check) {
+                  check1 = check
+            }else{
+                check1 = JSON.parse(localStorage.getItem('fchat_titok_game'));
+            }
+        
+        var x = document.getElementById("myInput").value;
+        var index = parseInt(x)
+        display = document.querySelector('#time');
+        var durations = check1[index].duration;
+        
+        startTimer(durations, display);
+        showQuestion(); 
+        
+            });
+    });        
+    
+     
+</script>
+
+<script src="function.js"></script>
+ 
+</body>
+</html>
